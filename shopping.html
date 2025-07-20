@@ -1,0 +1,58 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📅 Shopping List</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
+    h1 { color: #4a90e2; }
+  </style>
+</head>
+<body>
+  <h1>📅 Shopping List</h1>
+  <div id="schedule"></div>
+
+  <input type="text" id="newEvent" placeholder="New event">
+  <button onclick="addEvent()">Add</button>
+
+  <script>
+    
+const firebaseConfig = {
+  apiKey: "AIzaSyCLk1Vvehsy-A0r9uXfPDuqaSMVS8zcxz8",
+  authDomain: "shopping-96184.firebaseapp.com",
+  projectId: "shopping-96184",
+  storageBucket: "shopping-96184.firebasestorage.app",
+  messagingSenderId: "1095155089765",
+  appId: "1:1095155089765:web:ef262dfcc67a32ee41e18c"
+};
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    function loadEvents() {
+      db.collection('shopping').get().then(snapshot => {
+        let html = '';
+        snapshot.forEach(doc => {
+          html += `<p>${doc.data().event}</p>`;
+        });
+        document.getElementById('schedule').innerHTML = html;
+      });
+    }
+
+    function addEvent() {
+      const event = document.getElementById('newEvent').value;
+      db.collection('shopping').add({ event }).then(() => {
+        document.getElementById('newEvent').value = '';
+        loadEvents();
+      });
+    }
+
+    loadEvents();
+  </script>
+</body>
+</html>
