@@ -1,0 +1,396 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href='/BM/'>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📋 My Productivity App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script defer src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #f6f9fc, #e5f0ff);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      width: 95%;
+      max-width: 1000px;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #4a90e2;
+      margin-bottom: 20px;
+    }
+    #passwordScreen, #mainApp {
+      display: none;
+    }
+    input[type="password"], input[type="text"], input[type="time"], textarea {
+      width: 80%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover {
+      background: #357abd;
+    }
+    .tabs {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+    .tabs button {
+      flex: 1;
+      margin: 0 5px;
+      padding: 10px;
+      border-radius: 6px;
+      background: #f0f0f0;
+      color: #333;
+      font-weight: bold;
+      border: none;
+    }
+    .tabs button.active {
+      background: #4a90e2;
+      color: white;
+    }
+    .tab-content {
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.5s ease;
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .day {
+      padding: 5px;
+      background: #eaf2fb;
+      border-radius: 6px;
+      min-height: 60px;
+      position: relative;
+      cursor: pointer;
+    }
+    .day.today {
+      background: #d4edda;
+    }
+    .day .date {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-weight: bold;
+    }
+    .day .events {
+      font-size: 0.8rem;
+      margin-top: 20px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .event-item, li {
+      background: #f0f0f0;
+      margin: 5px 0;
+      padding: 5px;
+      border-radius: 6px;
+    }
+    li span {
+      margin-left: 5px;
+    }
+    li button {
+      background: #e74c3c;
+      float: right;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📋 My Productivity App</h1>
+
+    <div id="passwordScreen">
+      <p>🔒 Enter Password to Access:</p>
+      <input type="password" id="passwordInput" placeholder="Enter password" />
+      <br />
+      <button onclick="checkPassword()">Unlock</button>
+    </div>
+
+    <div id="mainApp">
+      <div class="tabs">
+        <button id="tab-scheduler" onclick="showTab('scheduler')">📅 Scheduler</button>
+        <button id="tab-shopping" onclick="showTab('shopping')">🛒 Shopping</button>
+        <button id="tab-todo" onclick="showTab('todo')">✅ To-Do</button>
+      </div>
+
+      <!-- Scheduler Tab -->
+      <div id="scheduler" class="tab-content">
+        <div id="calendar"></div>
+        <div id="details" style="display:none;">
+          <h3 id="selectedDate">Date</h3>
+          <input type="text" id="eventTitle" placeholder="Event Title" />
+          <textarea id="eventContent" rows="2" placeholder="Event Content"></textarea>
+          <input type="time" id="eventTime" />
+          <button onclick="addEvent()">Add Event</button>
+          <div id="eventList"></div>
+        </div>
+      </div>
+
+      <!-- Shopping List Tab -->
+      <div id="shopping" class="tab-content">
+        <input type="text" id="shoppingInput" placeholder="Enter item" />
+        <button onclick="addItem()">Add</button>
+        <h4>📝 Active Items</h4>
+        <ul id="activeList"></ul>
+        <button onclick="toggleCompleted()">Show/Hide Completed</button>
+        <div id="completedSection" style="display:none;">
+          <h4>✅ Completed Items</h4>
+          <ul id="completedList"></ul>
+        </div>
+      </div>
+
+      <!-- To-Do List Tab -->
+      <div id="todo" class="tab-content">
+        <input type="text" id="todoInput" placeholder="Enter task" />
+        <button onclick="addTask()">Add</button>
+        <h4>📝 Active Tasks</h4>
+        <ul id="activeTasks"></ul>
+        <button onclick="toggleCompletedTasks()">Show/Hide Completed</button>
+        <div id="completedTasksSection" style="display:none;">
+          <h4>✅ Completed Tasks</h4>
+          <ul id="completedTasks"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLk1Vvehsy-A0r9uXfPDuqaSMVS8zcxz8",
+      authDomain: "scheduler-96184.firebaseapp.com",
+      projectId: "scheduler-96184",
+      storageBucket: "scheduler-96184.firebasestorage.app",
+      messagingSenderId: "1095155089765",
+      appId: "1:1095155089765:web:ef262dfcc67a32ee41e18c"
+    };
+    window.addEventListener('DOMContentLoaded', () => { firebase.initializeApp(firebaseConfig); });
+    const db = firebase.firestore();
+
+    // Tabs & Password Logic
+    document.getElementById('passwordScreen').style.display = 'block';
+    function checkPassword() {
+      const input = document.getElementById('passwordInput').value;
+      if (input === "1234") {
+        document.getElementById('passwordScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        showTab('scheduler');
+        loadCalendar();
+        loadShoppingList();
+        loadTasks();
+      } else {
+        alert("❌ Wrong password!");
+      }
+    }
+    function showTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tabs button').forEach(el => el.classList.remove('active'));
+      document.getElementById(tab).classList.add('active');
+      document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+
+    // Scheduler Logic
+    const calendar = document.getElementById('calendar');
+    let selectedDate = null;
+    function loadCalendar() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      calendar.innerHTML = "";
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const day = document.createElement('div');
+        day.className = 'day';
+        if (dateStr === new Date().toISOString().split('T')[0]) day.classList.add('today');
+        day.innerHTML = `<div class="date">${d}</div><div class="events" id="events-${dateStr}"></div>`;
+        day.onclick = () => showDetails(dateStr);
+        calendar.appendChild(day);
+        loadEvents(dateStr);
+      }
+    }
+    function showDetails(date) {
+      selectedDate = date;
+      document.getElementById('selectedDate').textContent = date;
+      document.getElementById('details').style.display = 'block';
+      loadEventList(date);
+    }
+    function addEvent() {
+      const title = document.getElementById('eventTitle').value.trim();
+      const content = document.getElementById('eventContent').value.trim();
+      const time = document.getElementById('eventTime').value;
+      if (title) {
+        db.collection('scheduler').add({
+          date: selectedDate,
+          title: title,
+          content: content,
+          time: time,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+          document.getElementById('eventTitle').value = "";
+          document.getElementById('eventContent').value = "";
+          document.getElementById('eventTime').value = "";
+          loadEvents(selectedDate);
+          loadEventList(selectedDate);
+        });
+      }
+    }
+    function loadEvents(date) {
+      const eventsContainer = document.getElementById(`events-${date}`);
+      db.collection('scheduler').where('date', '==', date)
+        .onSnapshot(snapshot => {
+          eventsContainer.innerHTML = "";
+          let count = 1;
+          snapshot.forEach(doc => {
+            const div = document.createElement('div');
+            div.textContent = `${count++}. ${doc.data().title}`;
+            eventsContainer.appendChild(div);
+          });
+        });
+    }
+    function loadEventList(date) {
+      const eventList = document.getElementById('eventList');
+      eventList.innerHTML = "";
+      db.collection('scheduler').where('date', '==', date)
+        .onSnapshot(snapshot => {
+          eventList.innerHTML = "";
+          let count = 1;
+          snapshot.forEach(doc => {
+            const div = document.createElement('div');
+            div.className = 'event-item';
+            div.innerHTML = `${count++}. <b>${doc.data().title}</b> - ${doc.data().content} (${doc.data().time}) <button onclick="deleteEvent('${doc.id}', '${date}')">Delete</button>`;
+            eventList.appendChild(div);
+          });
+        });
+    }
+    function deleteEvent(id, date) {
+      if (confirm("정말 삭제할까요?")) {
+        db.collection('scheduler').doc(id).delete();
+      }
+    }
+
+    // Shopping List Logic
+    function loadShoppingList() {
+      const activeList = document.getElementById('activeList');
+      const completedList = document.getElementById('completedList');
+      db.collection('shopping').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
+        activeList.innerHTML = "";
+        completedList.innerHTML = "";
+        snapshot.forEach(doc => {
+          const item = doc.data();
+          const li = document.createElement('li');
+          li.innerHTML = `<input type="checkbox" ${item.completed ? "checked" : ""} onclick="toggleComplete('${doc.id}', ${!item.completed}, 'shopping')">
+                          <span>${item.text}</span>
+                          <button onclick="editItem('${doc.id}', '${item.text}', 'shopping')">✏️ Edit</button>`;
+          if (item.completed) {
+            li.querySelector('span').style.textDecoration = "line-through";
+            completedList.appendChild(li);
+          } else {
+            activeList.appendChild(li);
+          }
+        });
+      });
+    }
+    function addItem() {
+      const input = document.getElementById('shoppingInput');
+      const text = input.value.trim();
+      if (text) {
+        db.collection('shopping').add({
+          text: text,
+          completed: false,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+          input.value = "";
+        });
+      }
+    }
+
+    // To-Do List Logic
+    function loadTasks() {
+      const activeTasks = document.getElementById('activeTasks');
+      const completedTasks = document.getElementById('completedTasks');
+      db.collection('todo').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
+        activeTasks.innerHTML = "";
+        completedTasks.innerHTML = "";
+        snapshot.forEach(doc => {
+          const task = doc.data();
+          const li = document.createElement('li');
+          li.innerHTML = `<input type="checkbox" ${task.completed ? "checked" : ""} onclick="toggleComplete('${doc.id}', ${!task.completed}, 'todo')">
+                          <span>${task.text}</span>
+                          <button onclick="editItem('${doc.id}', '${task.text}', 'todo')">✏️ Edit</button>`;
+          if (task.completed) {
+            li.querySelector('span').style.textDecoration = "line-through";
+            completedTasks.appendChild(li);
+          } else {
+            activeTasks.appendChild(li);
+          }
+        });
+      });
+    }
+    function addTask() {
+      const input = document.getElementById('todoInput');
+      const text = input.value.trim();
+      if (text) {
+        db.collection('todo').add({
+          text: text,
+          completed: false,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+          input.value = "";
+        });
+      }
+    }
+
+    // Common functions
+    function toggleComplete(id, completed, collection) {
+      db.collection(collection).doc(id).update({ completed: completed });
+    }
+    function editItem(id, oldText, collection) {
+      const newText = prompt("Edit:", oldText);
+      if (newText !== null && newText.trim() !== "") {
+        db.collection(collection).doc(id).update({ text: newText.trim() });
+      }
+    }
+    function toggleCompleted() {
+      const section = document.getElementById('completedSection');
+      section.style.display = section.style.display === "none" ? "block" : "none";
+    }
+    function toggleCompletedTasks() {
+      const section = document.getElementById('completedTasksSection');
+      section.style.display = section.style.display === "none" ? "block" : "none";
+    }
+  </script>
+</body>
+</html>
