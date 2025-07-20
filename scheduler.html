@@ -1,23 +1,131 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>📅 Scheduler</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <title>📅 Full Scheduler</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
   <style>
-    body { font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
-    h1 { color: #4a90e2; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f6f9fc;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #4a90e2;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin-top: 20px;
+    }
+    .day {
+      padding: 10px;
+      background: #eaf2fb;
+      border-radius: 6px;
+      min-height: 80px;
+      position: relative;
+      cursor: pointer;
+    }
+    .day.today {
+      background: #d4edda;
+    }
+    .day .date {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-weight: bold;
+    }
+    .day .events {
+      margin-top: 20px;
+      font-size: 0.85rem;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .controls select, .controls button {
+      padding: 5px 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      background: #f0f0f0;
+      font-size: 1rem;
+    }
+    .details {
+      margin-top: 20px;
+      background: #f9f9f9;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .details h2 {
+      margin-top: 0;
+      color: #4a90e2;
+    }
+    .details input, .details textarea, .details button {
+      display: block;
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .event-item {
+      border-bottom: 1px solid #ddd;
+      padding: 5px 0;
+    }
+    .event-item button {
+      float: right;
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .event-item button:hover {
+      background: #c0392b;
+    }
   </style>
 </head>
 <body>
-  <h1>📅 Scheduler</h1>
-  <div id="schedule"></div>
-  <input type="text" id="newEvent" placeholder="New event" />
-  <button onclick="addEvent()">Add</button>
+  <div class="container">
+    <h1>📅 Full Scheduler</h1>
+    <div class="controls">
+      <button onclick="changeMonth(-1)">← Prev</button>
+      <div>
+        <select id="monthSelect"></select>
+        <select id="yearSelect"></select>
+      </div>
+      <button onclick="changeMonth(1)">Next →</button>
+    </div>
+    <div class="calendar" id="calendar"></div>
+    <div class="details" id="details" style="display:none;">
+      <h2 id="selectedDate">Date</h2>
+      <input type="text" id="eventTitle" placeholder="Event Title (30%)" />
+      <textarea id="eventContent" rows="2" placeholder="Event Content (70%)"></textarea>
+      <input type="time" id="eventTime" />
+      <button onclick="addEvent()">Add Event</button>
+      <div id="eventList"></div>
+    </div>
+  </div>
+
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCLk1Vvehsy-A0r9uXfPDuqaSMVS8zcxz8",
@@ -30,25 +138,135 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    function loadEvents() {
-      db.collection('scheduler').get().then(snapshot => {
-        let html = '';
-        snapshot.forEach(doc => {
-          html += `<p>${doc.data().event}</p>`;
-        });
-        document.getElementById('schedule').innerHTML = html;
-      });
+    const calendar = document.getElementById('calendar');
+    const monthSelect = document.getElementById('monthSelect');
+    const yearSelect = document.getElementById('yearSelect');
+    const details = document.getElementById('details');
+    const selectedDateEl = document.getElementById('selectedDate');
+    const eventListEl = document.getElementById('eventList');
+    let currentMonth, currentYear, selectedDate;
+
+    for (let m = 0; m < 12; m++) {
+      const option = document.createElement('option');
+      option.value = m;
+      option.textContent = new Date(2023, m).toLocaleString('default', { month: 'long' });
+      monthSelect.appendChild(option);
+    }
+    const currentYearValue = new Date().getFullYear();
+    for (let y = currentYearValue - 5; y <= currentYearValue + 5; y++) {
+      const option = document.createElement('option');
+      option.value = y;
+      option.textContent = y;
+      yearSelect.appendChild(option);
+    }
+    monthSelect.value = new Date().getMonth();
+    yearSelect.value = currentYearValue;
+
+    function loadCalendar() {
+      calendar.innerHTML = "";
+      currentMonth = parseInt(monthSelect.value);
+      currentYear = parseInt(yearSelect.value);
+      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      for (let i = 0; i < firstDay; i++) {
+        const emptyCell = document.createElement('div');
+        calendar.appendChild(emptyCell);
+      }
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dayCell = document.createElement('div');
+        dayCell.className = 'day';
+        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        if (dateStr === new Date().toISOString().split('T')[0]) {
+          dayCell.classList.add('today');
+        }
+        dayCell.innerHTML = `<div class=\"date\">${d}</div><div class=\"events\" id=\"events-${dateStr}\"></div>`;
+        dayCell.onclick = () => showDetails(dateStr);
+        calendar.appendChild(dayCell);
+        loadEvents(dateStr);
+      }
+    }
+
+    function changeMonth(offset) {
+      let newMonth = parseInt(monthSelect.value) + offset;
+      let newYear = parseInt(yearSelect.value);
+      if (newMonth < 0) { newMonth = 11; newYear--; }
+      if (newMonth > 11) { newMonth = 0; newYear++; }
+      monthSelect.value = newMonth;
+      yearSelect.value = newYear;
+      loadCalendar();
+    }
+
+    monthSelect.onchange = loadCalendar;
+    yearSelect.onchange = loadCalendar;
+
+    function showDetails(date) {
+      selectedDate = date;
+      selectedDateEl.textContent = date;
+      details.style.display = 'block';
+      loadEventList(date);
     }
 
     function addEvent() {
-      const event = document.getElementById('newEvent').value;
-      db.collection('scheduler').add({ event }).then(() => {
-        document.getElementById('newEvent').value = '';
-        loadEvents();
-      });
+      const title = document.getElementById('eventTitle').value.trim();
+      const content = document.getElementById('eventContent').value.trim();
+      const time = document.getElementById('eventTime').value;
+      if (title) {
+        db.collection('scheduler').add({
+          date: selectedDate,
+          title: title,
+          content: content,
+          time: time,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+          document.getElementById('eventTitle').value = "";
+          document.getElementById('eventContent').value = "";
+          document.getElementById('eventTime').value = "";
+          loadEvents(selectedDate);
+          loadEventList(selectedDate);
+        });
+      }
     }
 
-    loadEvents();
+    function loadEvents(date) {
+      const eventsContainer = document.getElementById(`events-${date}`);
+      db.collection('scheduler').where('date', '==', date)
+        .onSnapshot(snapshot => {
+          eventsContainer.innerHTML = "";
+          let count = 1;
+          snapshot.forEach(doc => {
+            const event = doc.data();
+            const div = document.createElement('div');
+            div.textContent = `${count++}. ${event.title}`;
+            eventsContainer.appendChild(div);
+          });
+        });
+    }
+
+    function loadEventList(date) {
+      eventListEl.innerHTML = "";
+      db.collection('scheduler').where('date', '==', date)
+        .onSnapshot(snapshot => {
+          eventListEl.innerHTML = "";
+          let count = 1;
+          snapshot.forEach(doc => {
+            const div = document.createElement('div');
+            div.className = 'event-item';
+            div.innerHTML = `${count++}. <b>${doc.data().title}</b> - ${doc.data().content} (${doc.data().time}) <button onclick=\"deleteEvent('${doc.id}', '${date}')\">Delete</button>`;
+            eventListEl.appendChild(div);
+          });
+        });
+    }
+
+    function deleteEvent(id, date) {
+      if (confirm(\"정말 삭제할까요?\")) {
+        db.collection('scheduler').doc(id).delete().then(() => {
+          loadEvents(date);
+          loadEventList(date);
+        });
+      }
+    }
+
+    loadCalendar();
   </script>
 </body>
 </html>
