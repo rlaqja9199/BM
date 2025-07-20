@@ -2,8 +2,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>📅 Scheduler</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
@@ -16,22 +16,18 @@
 <body>
   <h1>📅 Scheduler</h1>
   <div id="schedule"></div>
-
-  <input type="text" id="newEvent" placeholder="New event">
+  <input type="text" id="newEvent" placeholder="New event" />
   <button onclick="addEvent()">Add</button>
-
   <script>
-    
-const firebaseConfig = {
-  apiKey: "AIzaSyCLk1Vvehsy-A0r9uXfPDuqaSMVS8zcxz8",
-  authDomain: "scheduler-96184.firebaseapp.com",
-  projectId: "scheduler-96184",
-  storageBucket: "scheduler-96184.firebasestorage.app",
-  messagingSenderId: "1095155089765",
-  appId: "1:1095155089765:web:ef262dfcc67a32ee41e18c"
-};
-
-    const app = firebase.initializeApp(firebaseConfig);
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLk1Vvehsy-A0r9uXfPDuqaSMVS8zcxz8",
+      authDomain: "scheduler-96184.firebaseapp.com",
+      projectId: "scheduler-96184",
+      storageBucket: "scheduler-96184.firebasestorage.app",
+      messagingSenderId: "1095155089765",
+      appId: "1:1095155089765:web:ef262dfcc67a32ee41e18c"
+    };
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
     function loadEvents() {

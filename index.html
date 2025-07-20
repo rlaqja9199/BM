@@ -1,149 +1,155 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scheduler App</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📋 My Productivity App</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', sans-serif;
-    }
     body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
       background: linear-gradient(135deg, #f6f9fc, #e5f0ff);
-      color: #333;
-    }
-    .login-container {
       display: flex;
+      flex-direction: column;
+      align-items: center;
       justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background: url('https://source.unsplash.com/1600x900/?nature,abstract') no-repeat center center/cover;
-    }
-    .login-card {
-      background: rgba(255, 255, 255, 0.9);
-      padding: 30px;
-      border-radius: 16px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-      text-align: center;
-      width: 300px;
-    }
-    .login-card h2 {
-      margin-bottom: 20px;
-      color: #4a90e2;
-    }
-    .login-card input[type="password"] {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      margin-bottom: 15px;
-    }
-    .login-card button {
-      width: 100%;
-      background: #4a90e2;
-      color: white;
-      border: none;
-      padding: 10px;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .login-card button:hover {
-      background: #357abd;
-    }
-    .navbar {
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      background: #fff;
-      padding: 15px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .navbar a {
-      text-decoration: none;
-      color: #4a90e2;
-      font-weight: 600;
-      padding: 8px 16px;
-      border-radius: 20px;
-    }
-    .navbar a:hover, .navbar a.active {
-      background: #4a90e2;
-      color: white;
+      min-height: 100vh;
     }
     .container {
-      max-width: 800px;
-      margin: 20px auto;
       background: #fff;
-      padding: 20px;
       border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 800px;
+      padding: 20px;
+      text-align: center;
     }
-    h2 {
+    h1 {
       color: #4a90e2;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
     }
-    .btn {
+    #passwordScreen, #mainApp {
+      display: none;
+    }
+    input[type="password"] {
+      width: 80%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 1rem;
+    }
+    button {
       background: #4a90e2;
       color: white;
       border: none;
-      border-radius: 8px;
-      padding: 8px 16px;
+      padding: 10px 20px;
+      border-radius: 6px;
       cursor: pointer;
+      font-size: 1rem;
     }
-    .btn:hover {
+    button:hover {
       background: #357abd;
+    }
+    .tabs {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+    .tabs button {
+      flex: 1;
+      margin: 0 5px;
+      padding: 10px;
+      border-radius: 6px;
+      background: #f0f0f0;
+      color: #333;
+      font-weight: bold;
+    }
+    .tabs button.active {
+      background: #4a90e2;
+      color: white;
+    }
+    .tab-content {
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.5s ease;
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+      opacity: 1;
+      transform: translateX(0);
+    }
+    iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <div class="login-container" id="loginScreen">
-    <div class="login-card">
-      <h2>Welcome</h2>
-      <input type="password" id="passwordInput" placeholder="Enter Password">
-      <button onclick="checkPassword()">Login</button>
+  <div class="container">
+    <h1>📋 My Productivity App</h1>
+
+    <div id="passwordScreen">
+      <p>🔒 Enter Password to Access:</p>
+      <input type="password" id="passwordInput" placeholder="Enter password" />
+      <br />
+      <button onclick="checkPassword()">Unlock</button>
     </div>
-  </div>
 
-  <div id="mainApp" style="display:none;">
-    <nav class="navbar">
-      <a href="#" class="active" onclick="goTo('scheduler')">📅 Schedule</a>
-      <a href="#" onclick="goTo('shopping')">🛒 Shopping</a>
-      <a href="#" onclick="goTo('todo')">✅ To-Do</a>
-    </nav>
-
-    <div class="container" id="contentArea">
-      <h2>📅 Schedule</h2>
-      <p>Here will be your scheduler content.</p>
+    <div id="mainApp">
+      <div class="tabs">
+        <button id="tab-scheduler" onclick="showTab('scheduler')">📅 Scheduler</button>
+        <button id="tab-shopping" onclick="showTab('shopping')">🛒 Shopping</button>
+        <button id="tab-todo" onclick="showTab('todo')">✅ To-Do</button>
+      </div>
+      <div id="scheduler" class="tab-content">
+        <iframe src="scheduler.html"></iframe>
+      </div>
+      <div id="shopping" class="tab-content">
+        <iframe src="shopping.html"></iframe>
+      </div>
+      <div id="todo" class="tab-content">
+        <iframe src="todo.html"></iframe>
+      </div>
     </div>
   </div>
 
   <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLk1Vvehsy-A0r9uXfPDuqaSMVS8zcxz8",
+      authDomain: "scheduler-96184.firebaseapp.com",
+      projectId: "scheduler-96184",
+      storageBucket: "scheduler-96184.firebasestorage.app",
+      messagingSenderId: "1095155089765",
+      appId: "1:1095155089765:web:ef262dfcc67a32ee41e18c"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    document.getElementById('passwordScreen').style.display = 'block';
     function checkPassword() {
-      const password = document.getElementById('passwordInput').value;
-      if(password === '0523') {
-        document.getElementById('loginScreen').style.display = 'none';
+      const input = document.getElementById('passwordInput').value;
+      if (input === "1234") {
+        document.getElementById('passwordScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
+        showTab('scheduler');
       } else {
-        alert('Incorrect Password!');
+        alert("❌ Wrong password!");
       }
     }
 
-    function goTo(page) {
-      document.querySelectorAll('.navbar a').forEach(a => a.classList.remove('active'));
-      event.target.classList.add('active');
-
-      const content = document.getElementById('contentArea');
-      if(page === 'scheduler') {
-        content.innerHTML = `<h2>📅 Schedule</h2><p>Here will be your scheduler content.</p>`;
-      } else if(page === 'shopping') {
-        content.innerHTML = `<h2>🛒 Shopping List</h2><p>Here will be your shopping list content.</p>`;
-      } else if(page === 'todo') {
-        content.innerHTML = `<h2>✅ To-Do List</h2><p>Here will be your to-do list content.</p>`;
-      }
+    function showTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tabs button').forEach(el => el.classList.remove('active'));
+      document.getElementById(tab).classList.add('active');
+      document.getElementById(`tab-${tab}`).classList.add('active');
     }
   </script>
 </body>
